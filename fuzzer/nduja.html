@@ -5,10 +5,10 @@
 <meta http-equiv="Cache-Control" content="no-cache"/>	
 <script type='text/javascript'>
 
-MAXELEM=5;
-MAXPROP=3;
+MAXELEM=7;
+MAXPROP=4;
 MAXDESTR=3;
-MAXLISTENERS=2;
+MAXLISTENERS=3;
 events=['DOMActivate','DOMCharacterDataModified','DOMNodeInserted','DOMNodeInsertedIntoDocument','DOMNodeRemoved','DOMNodeRemovedFromDocument','DOMSubtreeModified','change','CheckboxStateChange','copy','cut','focus','input','load','paste','select','selectionchange','textInput','unload'];
 commands=['delete','insertButton','insertFieldset','insertHorizontalRule','insertIFrame','insertInputButton','insertInputCheckbox','insertInputFileUpload','insertInputHidden','insertInputImage','insertInputPassword','insertInputRadio','insertInputReset','insertInputSubmit','insertInputText','insertMarquee','insertOrderedList','insertSelectDropdown','insertSelectListbox','insertTextArea','insertUnorderedList'];
 interesting_vals = [0, 1, -1, 5e6, -7e6, 8e-6, 2e100, 7500000000, 4400000000, -4400000000, -7500000000, '',  0x80000000, 0xFFFFFFFF, NaN,
@@ -42,7 +42,30 @@ object_blacklist = [
   'cloneNode',
   'open',
   'close',
-  'print'
+  'print',
+  'title',
+  'localName',
+  'tagName',
+  'firstElementChild',
+  'lastElementChild',
+  'firstChild',
+  'addEventListener',
+  'removeEventListener',
+  'dispatchEvent',
+  'replaceChild',
+  'removeChild',
+  'appendChild',
+  'getAttributeNode',
+  'setAttributeNode',
+  'removeAttribute',
+  'getAttributeNodeNS',
+  'setAttributeNodeNS',
+  'removeAttributeNS',
+  'hasAttribute',
+  'setAttribute', 
+  'getAttribute',
+  'hasAttributes',
+  'setAttribute'
 ];
 
 
@@ -205,7 +228,7 @@ elements = [
   "TITLE",
   "H1",
   "BLINK",
- // "!DOCTYPE",
+  "!DOCTYPE",
   "AREA",
   "COL",
   "SPAN",
@@ -234,8 +257,31 @@ elements = [
 *****************************************/
 
 var mor_array = %MOR_ARRAY% ;
-var mor_index = 0 ;
+var mor_index = %MOR_INDEX% ;
+//var mor_rand_mod = %MOR_MOD% ;  //  TIPS! less is good !..
+//turn_on_log var log_url = "%log_url%";
 
+function XHR() {
+    var xhr;
+    try {xhr = new XMLHttpRequest();}
+    catch(e) {
+        var IEXHRVers =["Msxml3.XMLHTTP","Msxml2.XMLHTTP","Microsoft.XMLHTTP"];
+        for (var i=0,len=IEXHRVers.length;i< len;i++) {
+            try {xhr = new ActiveXObject(IEXHRVers[i]);}
+            catch(e) {continue;}
+        }
+    }
+    return xhr;
+}
+
+function log(execute_log) {
+    if (typeof log_url!='undefined') {
+        var xhr=XHR();
+        xhr.open('get',log_url+'log='+execute_log,false);
+        xhr.send(null);
+    } else
+        console.log(execute_log);
+}
 // Pick a random number between 0 and X
 function rand( x ){
 	//return Math.floor( Math.random() * x );
@@ -244,7 +290,7 @@ function rand( x ){
 }
 	
 function R(mod) {
-  return rand(10000) % mod;
+  return rand(10000) % mod;//rand(mor_rand_mod) % mod;
 }		
 // Pick either true or false
 function RBool(){
@@ -264,7 +310,7 @@ function rand_item( arr )
 }
 // End random	
 
-function initialize(elem){
+function initialize(elem,element_tree_index){
 	
 	try{
 		currElem=findInTree(elem);
@@ -274,8 +320,12 @@ function initialize(elem){
 			ri=rand_item(events);
 			//alert(r);
 			rndb=RBool();
-			elem.addEventListener (ri, modifyDOM, rndb);	
-
+			elem.addEventListener (ri, modifyDOM, rndb);
+            if (typeof element_tree_index!='undefine')
+            //    log('try{elementTree1['+element_tree_index+'].addEventListener("'+ri+'",'+modifyDOM+','+rndb+');}catch(e){}');
+                log('try{elementTree1['+element_tree_index+'].addEventListener("'+ri+'",function(){},'+rndb+');}catch(e){}');
+            else
+                log('try{'+elem.tagName+'.addEventListener("'+ri+'",'+modifyDOM+','+rndb+');}catch(e){}');
 		}
 	}	
 	catch (exception) { 
@@ -292,6 +342,8 @@ function removeListeners(elem){
 			rndb=RBool();
 			//alert(r);
 			elem.removeEventListener (ri, modifyDOM, rndb);	
+//            log('try{'+elem.tagName+'.addEventListener("'+ri+'",'+modifyDOM+','+rndb+');}catch(e){}');
+            log('try{'+elem.tagName+'.addEventListener("'+ri+'",function(){},'+rndb+');}catch(e){}');
 
 
 			}
@@ -315,28 +367,40 @@ function findInTree(elem){
 }
 
 function modifyDOM(event){
-	
+	try {
+        log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'('+event.eventPhase+')');
 		switch (event.eventPhase) {
 		case Event.CAPTURING_PHASE:
 			removeListeners(event.currentTarget);
+            log('//modifyDOM: removeListeners('+event.currentTarget.tagName+')');
 			switch (R(4)){
 				case 0:
 					createElemRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createElemRange())');
 					alterRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterRange())');
 					break;
 				case 1:
 					createTxtRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createTxtRange())');
 					alterTextRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterTextRange())');
 					break;
 				case 2:
 					createElemRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createElemRange())');
 					alterRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterRange())');
 					moveIterator();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(moveIterator())');
 					break;
 				case 3:
 					createTxtRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createTxtRange())');
 					alterTextRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterTextRange())');
 					moveTreeWalker();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(moveTreeWalker())');
 					break;	
 			}
 			
@@ -346,16 +410,19 @@ function modifyDOM(event){
 			switch (R(4)){
 				case 0:
 					moveIterator();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(moveIterator())');
 				break;
 				case 1:
-					insertSubTree();	
+					insertSubTree();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(insertSubTree())');	
 				break;
 				case 2:
 					treeCrawler1();
-
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(treeCrawler1())');
 				break;
 				case 3:
 					moveTreeWalker();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(moveTreeWalker())');
 				break;
 
 			}	
@@ -365,55 +432,76 @@ function modifyDOM(event){
 		case Event.AT_TARGET:
 			currElem=findInTree(event.target);
 			initialize(event.target);
+            log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(initialize('+event.target.tagName+')');
 
 			break;
 		case Event.BUBBLING_PHASE:
 			currElem=findInTree(event.currentTarget);
 			removeListeners(event.currentTarget);
+            log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(removeListeners('+event.currentTarget+')');
 				switch (R(4)){
 				case 0:
 					createElemRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createElemRange())');
 					alterRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterRange())');
 					break;
 				case 1:
 					createTxtRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createTxtRange())');
 					alterTextRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterTextRange())');
 					break;
 				case 2:
 					createElemRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createElemRange())');
 					alterRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterRange())');
 					createTxtRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createTxtRange())');
 					alterTextRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterTextRange())');
 					break;
 				case 3:
 					createTxtRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createTxtRange())');
 					alterTextRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterTextRange())');
 					createElemRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(createElemRange())');
 					alterRange();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(alterRange())');
 					break;	
 			}
 							
 			switch (R(4)){
 				case 0:
 					moveIterator();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(moveIterator())');
 				break;
 				case 1:
 					insertSubTree();	
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(insertSubTree())');
 				break;
 				case 2:
 					treeCrawler1();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(treeCrawler1())');
 
 				break;
 				case 3:
 					moveTreeWalker();
+                    log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(moveTreeWalker())');
 				break;
 
 			}
-			initialize(event.target);					
+			initialize(event.target);	
+            log('//modifyDOM: Tag='+event.srcElement.tagName+' Event:on'+event.type+'(initialize('+event.target+'))');				
 
 			break;
 		}
-	
+    } catch (e) {
+        
+    }
 }
 	
 function insertSubTree(){
@@ -424,9 +512,11 @@ function insertSubTree(){
 			
 			r=rand_item( elements );
 			elementTree2[h]=document.createElement(r);
+            log('elementTree2['+h+']=document.createElement("'+r+'");');
 			//alert(r);
 			rb=R(document.all.length);
 			document.all[rb].appendChild(elementTree2[h]);
+            log('document.all['+rb+'].appendChild(elementTree2['+h+']);');
 			//eventManage(elementTree2[j],j);
 			
 		}	
@@ -451,13 +541,18 @@ function buildDoc1(){
 
 function createTxtRange(){
 	try{
+        log('//no execute createTxtRange()');/*
 		range2 = document.body.createTextRange();
+        log('range2=document.body.createTextRange();');
 		r2=R(document.body.all.length);
 		startNode=document.body.all[r2];
+        log('startNode=document.body.all['+r2+'];');
 		range2.moveToElementText(startNode);
+        log('range2.moveToElementText('+startNode+');');
 		shift=R(20);			
-		range2.moveEnd("character", shift);  
-
+		range2.moveEnd("character", shift);
+        log('range2.moveEnd("character",'+shift+');');
+*/
 	}	
 	catch (exception) {
 	}
@@ -465,14 +560,21 @@ function createTxtRange(){
 
 function createElemRange1(){
 	try{
+        log('//no execute createElemRange1()');/*
 		range1 = document.createRange();
+        log('range1 = document.createRange();');
 		r1=R(document.all.length);
 		startNode=document.all[r1];
+        log('startNode=document.all['+r1+'];');
 		range1.setStart(startNode, 0);
+        log('range1.setStart('+startNode+', 0);');
 		r2=R(document.all.length);
 		endNode=document.all[r2];
+        log('endNode=document.all['+r2+'];');
 		range1.setEnd(endNode, 0);
+        log('range1.setEnd('+endNode+', 0);');
 		//alert("range created");
+        */
 	}
 	catch (exception) {
 	}
@@ -480,14 +582,20 @@ function createElemRange1(){
 
 function createElemRange(){
 	try{
+        log('//no execute createElemRange()');/*
 		range = document.createRange();
+        log('range=document.createRange();');
 		r1=R(document.all.length);
 		startNode=document.all[r1];
+        log('startNode=document.all['+r1+'];');
 		range.setStart(startNode, 0);
+        log('try{range.setStart(startNode,0);}catch(e){}');
 		r2=R(document.all.length);
 		endNode=document.all[r2];
+        log('endNode=document.all['+r2+'];');
 		range.setEnd(endNode, 0);
-		
+        log('try{range.setEnd(endNode,0);}catch(e){}');
+		*/
 	}
 	catch (exception) {
 	}
@@ -498,6 +606,7 @@ function createTagAggregation1(){
 		try{
 		index=R(elementTree1.length);
 		tagAggregation1 = document.getElementsByTagName(elementTree1[index].tagName);
+        log('tagAggregation1 = document.getElementsByTagName(elementTree1['+index+'].tagName);');
 		}
 		catch (exception) {
 		}
@@ -507,7 +616,9 @@ function createTreeWalker(){
 	 try{
 		rb=R(document.all.length);
 		randRoot=document.all[rb];
-		tw = document.createTreeWalker(document.all[randRoot], NodeFilter.SHOW_ALL, ElementChecker, false);
+		log('randRoot=document.all['+rb+'];');
+		tw = document.createTreeWalker(randRoot, NodeFilter.SHOW_ALL, ElementChecker, false);
+        log('tw=document.createTreeWalker(document.all['+rb+'],NodeFilter.SHOW_ALL,ElementChecker,false);');
 		}
 		catch (exception) {
 		}
@@ -517,7 +628,9 @@ function createNodeIterator(){
 	 try{
 		rb=R(document.all.length);
 		randRoot=document.all[rb];
-		ni = document.createNodeIterator(document.all[randRoot], NodeFilter.SHOW_ALL, ElementChecker, false);
+		log('randRoot=document.all['+rb+'];');
+		ni = document.createNodeIterator(randRoot, NodeFilter.SHOW_ALL, ElementChecker, false);
+        log('tw=document.createNodeIterator(document.all['+rb+'],NodeFilter.SHOW_ALL,ElementChecker,false);');
 		}
 		catch (exception) {
 		}
@@ -530,8 +643,10 @@ function createNodeIterator(){
 			case 0:
 				//alert(1);
 				createElemRange1();
+                log('//ElementChecker: createElemRange1()');
 				//alert(2);
 				deleteRange1();
+                log('//ElementChecker: deleteRange1()');
 				//alert(3);
 
 				break;
@@ -561,24 +676,33 @@ function buildElementsTree1(){
 	try{
 		elementTree1=[];
 		//clobber=[];
+        /*
 		if(document.createStyleSheet){
 			styleSheet1 = document.createStyleSheet ("");
+            log("styleSheet1=document.createStyleSheet('');");
 		}
 		else { 
 			styleSheet1=document.createElement('link'); 
+            log("styleSheet1=document.createElement('link');");
 			styleSheet1.rel='stylesheet'; 
+            log("styleSheet1.rel='stylesheet';");
 			document.body.appendChild(styleSheet1); 
+            log("document.body.appendChild(styleSheet1);");
 		} 
+        */
 		for (k=0;k<MAXELEM;k++){
 			
 			r=rand_item( elements );
 			elementTree1[k]=document.createElement(r);
+            log("elementTree1["+k+"]=document.createElement(\""+r+"\");");//elementTree1["+k+"]="+elementTree1[k]);
 			//assegno un id x clobbering
 			elementTree1[k].id="el"+k;
+            log("elementTree1["+k+"].id='el'+"+k+";");//elementTree1["+k+"]="+elementTree1[k]);
 			
 			rb=R(document.all.length);
 			document.all[rb].appendChild(elementTree1[k]);
-			initialize(elementTree1[k]);
+            log("document.all["+rb+"].appendChild(elementTree1["+k+"]);");//document.all["+rb+"]="+document.all[rb]);
+			initialize(elementTree1[k],k);
 			tweakattributes1(elementTree1[k],k);
 			tweakstyle1(elementTree1[k],k);
 		}
@@ -587,12 +711,27 @@ function buildElementsTree1(){
 	}
 }
 
+function find_value_index_in_interesting_vals(data) {
+    if (data==="") return 11;
+    for (var index=0;index<interesting_vals.length;++index)
+        if (data==interesting_vals[index])
+            return index;
+    return -1;
+}
+    
 function tweakElem(elem){
 	for( var p in elem){
 		try {
-			
+			        if (p.indexOf("on")!=-1) continue;
 					r=rand_item(interesting_vals);
 					elem.setAttribute(p,r);
+                    attr_index=find_value_index_in_interesting_vals(r);
+                    if (attr_index==31)
+                        log("try{"+elem.tagName+".setAttribute('"+p+"','\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141');}catch(e){}");
+                    else if ((18<=attr_index && attr_index<=30)||11==attr_index)
+                        log("try{"+elem.tagName+".setAttribute('"+p+"','"+r+"');}catch(e){}");
+                    else
+                        log("try{"+elem.tagName+".setAttribute('"+p+"',"+r+");}catch(e){}");
 		
 			}
 			
@@ -605,11 +744,16 @@ function tweakElem(elem){
 function tweakattributes1(elem,i){
 	for( var p in elem){
 		try {
-			
+			        if (p.indexOf("on")!=-1) continue;
 					r=rand_item(interesting_vals);
 					elem.setAttribute(p,r);
-
-		
+                    attr_index=find_value_index_in_interesting_vals(r);
+                    if (attr_index==31)
+                        log("try{elementTree1["+i+"].setAttribute('"+p+"','\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141');}catch(e){}");
+                    else if ((18<=attr_index && attr_index<=30)||11==attr_index)
+                        log("try{elementTree1["+i+"].setAttribute('"+p+"','"+r+"');}catch(e){}");
+                    else
+                        log("try{elementTree1["+i+"].setAttribute('"+p+"',"+r+");}catch(e){}");
 			}
 			
 		
@@ -620,13 +764,15 @@ function tweakattributes1(elem,i){
 function tweakattributes(elem){
 		for( var p in elem){
 			try {
-				elem.setAttribute(p,"\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141");
+			     if (p.indexOf("on")!=-1) continue;
+				elem.setAttribute(p,"\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141\\u4141");
+                //log("elem.setAttribute('"+p+"','\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141\u4141');");
 			}
 				catch (exception) {
 			}
 		}
-	}			
-
+	}	
+    
 function tweakstyle1 (elem,i){
 	for(j=0; j<MAXPROP;j++){
 		try {
@@ -636,6 +782,7 @@ function tweakstyle1 (elem,i){
 			valueIndex=R(propL);
 			propValue=prop[valueIndex];
 			styleSheet1.addRule(elementTree1[i].tagName,"{"+propName+": "+propValue+";}");
+            log("styleSheet1.addRule(elementTree1["+i+"].tagName,'{"+propName+"':'"+propValue+";}');");
 		}
 		catch (exception) {
 		}
@@ -646,6 +793,7 @@ function deleteRange1(){
 	try{
 		
 		range1.deleteContents();
+        log("range1.deleteContents();");
 	}
 	catch (exception) {
 	}
@@ -655,7 +803,7 @@ function deleteRange1(){
 function destroy1(node){
 	try {
 		node=null;
-		
+        log("node=null;");
 	  }
 	catch (exception) {
 	  }
@@ -667,15 +815,25 @@ function boom(){
 		try
 		{
 			createNodeIterator();
+            log("//boom createNodeIterator()");
 			createTreeWalker();
+            log("//boom createTreeWalker()");
 			createTagAggregation1();
+            log("//boom createTagAggregation1()");
 			createElemRange();
-			createTxtRange();					
+            log("//boom createElemRange()");
+			createTxtRange();			
+            log("//boom createTxtRange()");		
 			alterRange();
-			spray();
+            log("//boom alterRange()");
+			//spray();
+            //log("//boom createNodeIterator()");
 			moveIterator();
+            log("//boom moveIterator()");
 			moveTreeWalker();
+            log("//boom moveTreeWalker()");
 			tagCrawler1();
+            log("//boom tagCrawler1()");
 			
 		}
 		catch( exception )
@@ -685,46 +843,58 @@ function boom(){
 }
 
 function alterRange(){
-	try{
+	try{/*
 		cmd=rand(11);
 		rb=R(document.all.length);//va ristretto alla length del range
 		randElem=document.all[rb];
+        log("randElem=document.all["+rb+"];");
 		switch (cmd){
 			case 0:
 				range.deleteContents();
+                log("range2.deleteContents();");
 				break;
 			case 1:
 				range.collapse();
+                log("range2.collapse();");
 				break;
 			case 2:
 				var documentFragment = range.extractContents();
+                log("var documentFragment=range.extractContents();");
 				break;
 			case 3:
 				range.surroundContents(randElem);
+                log("try{range.surroundContents(randElem);}catch(e){}");
 				break;
 			case 4:	
 				range.selectNode(randElem);
+                log("try{range.selectNode(randElem);}catch(e){}");
 				break;
 			case 5:
 				range.selectNodeContents(randElem);
+                log("try{range.selectNodeContents(randElem);}catch(e){}");
 				break;
 			case 6:
 				range.insertNode(randElem);
+                log("try{range.insertNode(randElem);}catch(e){}");
 				break;
 			case 7:
 				range.setStartAfter(randElem);
+                log("try{range.setStartAfter(randElem);}catch(e){}");
 				break;
 			case 8:
 				range.setStartBefore(randElem);
+                log("try{range.setStartBefore(randElem);}catch(e){}");
 				break;
 			case 9:
 				range.setEndAfter(randElem);
+                log("try{range.setEndAfter(randElem);}catch(e){}");
 				break;						
 			case 10:
 				range.setEndBefore(randElem);
+                log("try{range.setEndBefore(randElem);}catch(e){}");
 				break;
 		}		
-		
+		*/
 						
 	}
 	catch( exception )
@@ -734,12 +904,14 @@ function alterRange(){
 }
 
 function alterTextRange(){
-	try{
+	try{/*
 		cmd=R(commands.length);
 		//alert(cmd)
 		range2.select();
+        log("range2.select();");
 		range2.execCommand(commands[cmd],true,null);
-	
+        log("range2.execCommand('"+commands[cmd]+"',true,null);");
+	*/
 	}
 	catch( exception )
 	{
@@ -752,6 +924,7 @@ function rulesCrawler1(){
 		for (i=0;i<l;i++){
 			
 			styleSheet1.cssRules[i].style.setAttribute('color','red');
+            log("styleSheet1.cssRules["+i+"].style.setAttribute('color','red');");
 		}	
 
 	}
@@ -769,9 +942,11 @@ function moveIterator(){
 			switch(rm){
 				case 0:
 					ni.nextNode();
+                    log("ni.nextNode();");
 					break;
 				case 1:
 					ni.previousNode();
+                    log("ni.previousNode();");
 					break;
 			
 			}
@@ -783,7 +958,6 @@ function moveIterator(){
 	}
 }
 
-
 function moveTreeWalker(){
 	try{
 		rMoves=R(5);
@@ -793,24 +967,31 @@ function moveTreeWalker(){
 			switch(rm){
 				case 0:
 					tw.nextNode();
+                    log("tw.nextNode();");
 					break;
 				case 1:
 					tw.previousNode();
+                    log("tw.previousNode();");
 					break;
 				case 2:
 					tw.previousSibling();
+                    log("tw.previousSibling();");
 					break;
 				case 3:
 					tw.nextSibling();
+                    log("tw.nextSibling();");
 					break;
 				case 4:
 					tw.firstChild();
+                    log("tw.firstChild();");
 					break;
 				case 5:
 					tw.lastChild();
+                    log("tw.lastChild();");
 					break;
 				case 6:
 					tw.parentNode();
+                    log("tw.parentNode();");
 					break;	
 			}
 		}	
@@ -820,7 +1001,6 @@ function moveTreeWalker(){
 	catch (exception) {
 	}
 }		
-
 function nodeIteration1(){
 	try{
 		current = ni.root;
@@ -872,7 +1052,7 @@ function nodeIteration(){
 		while (currentNode!=range.startContainer)  {
 			if (currentNode!=range.startContainer){
 				currentNode = ni.nextNode();
-				
+                log("currentLeaf=ni.nextNode()");
 			}
 		}
 		
@@ -888,7 +1068,7 @@ function treeIteration(){
 		while (currentLeaf!=range.startContainer)  {
 			if (currentLeaf!=range.startContainer){
 				currentLeaf = tw.nextNode();
-				
+                log("currentLeaf=tw.nextNode();");
 			}
 		}
 		
@@ -913,26 +1093,28 @@ function fuzzAttributes(index,orig){
 					try{
 						if (orig=="tree1"){
 
-							eval("elementTree1["+index+"]."+prop+" = null");
-							
+							eval("elementTree1["+index+"]."+prop+"=null");
+							log("elementTree1["+index+"]."+prop+"=null;");
 
-							eval("document.el"+index+"."+prop+" = null");
+							eval("document.el"+index+"."+prop+"=null");
+							log("document.el"+index+"."+prop+"=null;");
 						}
 						
 						if (orig=="tag1"){
-							eval("tagAggregation1["+index+"]."+prop+" = null");
+							eval("tagAggregation1["+index+"]."+prop+"=null");
+							log("tagAggregation1["+index+"]."+prop+"=null;");
 
 						}
 						
 						if ((orig=="it1") || (orig=="it2")){
 							eval("currentNode."+prop+" = null");
+							log("currentNode."+prop+" = null;");
 
 							
 						}
 						if (orig=="tw"){
 							eval("currentLeaf."+prop+" = null");
-
-							
+							log("currentLeaf."+prop+" = null;");
 						}
 					}
 					catch (exception){}		
@@ -942,23 +1124,25 @@ function fuzzAttributes(index,orig){
 					try{
 						if (orig=="tree1"){
 							eval("elementTree1["+index+"]."+prop+"()");
+							log("elementTree1["+index+"]."+prop+"();");
 
 							eval("document.el"+index+"."+prop+"()");
+							log("document.el"+index+"."+prop+"();");
 
 						}	
 						
 						if (orig=="tag1"){
 							eval("tagAggregator1["+index+"]."+prop+"()");
-
+							log("tagAggregator1["+index+"]."+prop+"();");
 						}
 						
 						if ((orig=="it1") || (orig=="it2")){
 							eval("currentNode."+prop+"()");
-							
+							log("currentNode."+prop+"();");
 						}
 						if (orig=="tw"){
 							eval("currentLeaf."+prop+"()");
-							
+							log("currentLeaf."+prop+"();");
 						}
 					}
 					catch (exception){}								
@@ -968,22 +1152,23 @@ function fuzzAttributes(index,orig){
 					try{
 						if (orig=="tree1"){
 							eval("elementTree1["+index+"]."+prop+"(elementTree1["+index+"].parentNode);");
+							log("elementTree1["+index+"]."+prop+"(elementTree1["+index+"].parentNode);");
 							eval("document.el"+index+"."+prop+"(document.el"+index+".parentNode");
-							
+							log("document.el"+index+"."+prop+"(document.el"+index+".parentNode;");
 						}
 						
 						if (orig=="tag1"){
 							eval("tagAggregator1["+index+"]."+prop+"(tagAggregator1.["+index+"].parentNode);");
-							
+							log("tagAggregator1["+index+"]."+prop+"(tagAggregator1.["+index+"].parentNode);");
 						}
 						
 						if ((orig=="it1") || (orig=="it2")){
 							eval("currentNode."+prop+"(currentNode.parentNode);");
-
+							log("currentNode."+prop+"(currentNode.parentNode);");
 						}
 						if (orig=="tw") {
 							eval("currentLeaf."+prop+"(currentLeaf.parentNode);");
-
+							log("currentLeaf."+prop+"(currentLeaf.parentNode);");
 						}
 					}
 					catch (exception){}		
@@ -993,21 +1178,23 @@ function fuzzAttributes(index,orig){
 					try{
 						if (orig=="tree1"){
 							eval("elementTree1["+index+"]."+prop+"=elementTree1["+index+"].parentNode."+prop+"");
+							log("elementTree1["+index+"]."+prop+"=elementTree1["+index+"].parentNode."+prop+";");
 							eval("document.el"+index+"."+prop+"(document.el"+index+".parentNode."+prop);
+							log("document.el"+index+"."+prop+"(document.el"+index+".parentNode."+prop+";");
 						}
 						
 						if (orig=="tag1"){
 							eval("tagAggregator1["+index+"]."+prop+"=tagAggregator1["+index+"].parentNode."+prop+"");
-							
+							log("tagAggregator1["+index+"]."+prop+"=tagAggregator1["+index+"].parentNode."+prop+";");
 						}
 						
 						if ((orig=="it1") || (orig=="it2")){
 							eval("currentNode."+prop+"=currentNode.parentNode."+prop+"");
-							
+							log("currentNode."+prop+"=currentNode.parentNode."+prop+";");
 						}
 						if (orig=="tw") {
 							eval("currentLeaf."+prop+"=currentLeaf.parentNode."+prop+"");
-							
+							log("currentLeaf."+prop+"=currentLeaf.parentNode."+prop+";");
 						}
 					}
 					catch (exception){}								
@@ -1019,24 +1206,23 @@ function fuzzAttributes(index,orig){
 						
 						if (orig=="tree1"){
 							eval("elementTree1["+index+"]." + prop + " = "+rv+"");
+							log("elementTree1["+index+"]." + prop + " = "+rv+";");
 							eval("document.el"+index+"." + prop + " = "+rv+"");
-							
+							log("document.el"+index+"." + prop + " = "+rv+";");
 						}
 						
 						if (orig=="tag1"){
 							eval("tagAggregator1["+index+"]." + prop + " = "+rv+"");
-
+							log("tagAggregator1["+index+"]." + prop + " = "+rv+";");
 						}
 						
 						if ((orig=="it1") || (orig=="it2")){
 							eval("currentNode." + prop + " = "+rv+"");
-							
-							
+							log("currentNode." + prop + " = "+rv+";");
 						}
 						if (orig=="tw") {
 							eval("currentLeaf." + prop + " = "+rv+"");
-							
-							
+							log("currentLeaf." + prop + " = "+rv+";");
 						}
 					}
 					catch (exception){}
@@ -1048,22 +1234,23 @@ function fuzzAttributes(index,orig){
 						
 						if (orig=="tree1"){
 							eval("elementTree1["+index+"]."+ prop + "("+rv+")");
+							log("elementTree1["+index+"]."+ prop + "("+rv+");");
 							eval("document.el"+index+"." + prop + " ("+rv+")");
-							
+							log("document.el"+index+"." + prop + " ("+rv+");");
 						}	
 						
 						if (orig=="tag1"){
 							eval("tagAggregator1["+index+"]."+ prop + "("+rv+")");
-							
+							log("tagAggregator1["+index+"]."+ prop + "("+rv+");");
 						}	
 						
 						if ((orig=="it1") || (orig=="it2")){
 							eval("currentNode."+ prop + "("+rv+")");
-							
+							log("currentNode."+ prop + "("+rv+");");
 						}
 						if (orig=="tw") {
 							eval("currentLeaf."+ prop + "("+rv+")");
-							
+							log("currentLeaf."+ prop + "("+rv+");");
 						}
 					}
 					catch (exception){}		
@@ -1078,8 +1265,7 @@ function fuzzAttributes(index,orig){
 	}	
 }
 function spray() {
-	for(S="\u4141",k=[],y=0;y++<65;)y<20?S+=S:k[y]=[S.substr(22)+"\u4141\u4141"].join("")
-	
+//	for(S="\u4141",k=[],y=0;y++<65;)y<20?S+=S:k[y]=[S.substr(22)+"\u4141\u4141"].join("")	
 }
 function morph_fuzz()
 {
@@ -1092,5 +1278,6 @@ function morph_fuzz()
 </script>	
 </head>
 <body onload="morph_fuzz();">
+<!--HTML Element-->
 </body>
 </html>
